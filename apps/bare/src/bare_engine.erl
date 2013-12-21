@@ -32,12 +32,14 @@ start_link() ->
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
 
-init(Args) ->
-    {ok, Args}.
+init(_State) ->
+  {ok, C} = eredis:start_link(),
+  {ok, C}.
 
-handle_call(hello, _From, State) ->
+handle_call(hello, From, C) ->
     io:format("hello, world~n"),
-    {reply, ok, State};
+    spawn_link(fun() -> handle_queue(From, C) end),
+    {reply, ok, C};
 handle_call(_, _From, State) ->
     {reply, ok, State}.
 
@@ -59,3 +61,7 @@ code_change(_OldVsn, State, _Extra) ->
 
 greet() ->
   gen_server:call(?MODULE, hello).
+
+handle_queue(_From, C) ->
+    {ok, Val}  = eredis:q(C, ["BLPOP", "queue", "0"]),
+    io:format("got a thang! ~p~n", [Val]).
