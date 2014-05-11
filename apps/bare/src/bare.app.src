@@ -5,7 +5,11 @@
   {registered, []},
   {applications, [
                   kernel,
-                  stdlib
+                  stdlib,
+                  folsom,
+                  eredis,
+                  cowboy,
+                  lager
                  ]},
   {mod, { bare_app, []}},
   {env, []}

@@ -16,10 +16,10 @@
          terminate/2, code_change/3]).
 
 %% ------------------------------------------------------------------
-%% SkelEngine Function Exports
+%% BareEngine Function Exports
 %% ------------------------------------------------------------------
 
--export([greet/0]).
+-export([queue_worker/0,handle_queue/1]).
 
 %% ------------------------------------------------------------------
 %% API Function Definitions
@@ -32,14 +32,11 @@ start_link() ->
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
 
-init(_State) ->
-  {ok, C} = eredis:start_link(),
-  {ok, C}.
+init(State) ->
+  %% eventually change to have dynamic number of redis queue listeners
+  spawn_link(fun() -> queue_worker() end),
+  {ok, State}.
 
-handle_call(hello, From, C) ->
-    io:format("hello, world~n"),
-    spawn_link(fun() -> handle_queue(From, C) end),
-    {reply, ok, C};
 handle_call(_, _From, State) ->
     {reply, ok, State}.
 
@@ -59,9 +56,13 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
 
-greet() ->
-  gen_server:call(?MODULE, hello).
+queue_worker() ->
+  {ok, C} = eredis:start_link(),
+  handle_queue(C).
 
-handle_queue(_From, C) ->
-    {ok, Val}  = eredis:q(C, ["BLPOP", "queue", "0"]),
-    io:format("got a thang! ~p~n", [Val]).
+handle_queue(C) ->
+    {ok, [_, Val]}  = eredis:q(C, ["blpop", "wsqueue", "0"], infinity),
+    <<RawAddress:10/binary, Message/binary>> = Val,
+    Address = erlang:list_to_binary(string:strip(erlang:binary_to_list(RawAddress))),
+    bare_app:tell_subscribers(Address, Message),
+    handle_queue(C).
