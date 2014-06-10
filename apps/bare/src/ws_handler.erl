@@ -15,7 +15,8 @@ websocket_init(_TransportName, Req, _Opts) ->
         { Identifier, _ } = cowboy_req:binding(id, Req),
         MyState = { Identifier, self() },
         ets:insert(ws_subscriptions, MyState),
-	{ok, Req, MyState, 600000}. %% 600 second timeout
+        {ok, Timeout} = application:get_env(bare, client_timeout, 30000),
+	{ok, Req, MyState, Timeout}. 
 
 websocket_handle({text, Msg}, Req, State) ->
 	{reply, {text, << "pong: ", Msg/binary >>}, Req, State};

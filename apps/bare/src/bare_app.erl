@@ -15,6 +15,7 @@
 start(_Type, _Args) ->
     %% 'spirals' are meters that operate over the trailing 60 seconds
     folsom_metrics:new_spiral(fspiral),
+    lager:error("hello world"),
     %% set up the websocket subscription table if it doesn't exist yet
     case ets:info(ws_subscriptions) of
       undefined -> ets:new(ws_subscriptions, [bag, named_table, public]);

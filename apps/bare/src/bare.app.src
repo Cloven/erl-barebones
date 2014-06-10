@@ -12,5 +12,7 @@
                   lager
                  ]},
   {mod, { bare_app, []}},
-  {env, []}
+  {env, [
+    {client_timeout, 60000}
+  ]}
  ]}.
