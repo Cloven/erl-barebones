@@ -11,11 +11,11 @@
 -type subscription_t() :: <<>>.
 -type message_t() :: <<>>.
 
--spec start(_, _) -> { ok, pid()}.
+-spec start(_, _) -> { ok, pid() }.
 start(_Type, _Args) ->
     %% 'spirals' are meters that operate over the trailing 60 seconds
     folsom_metrics:new_spiral(fspiral),
-    lager:error("hello world"),
+    lager:info("websocket subscription server started"),
     %% set up the websocket subscription table if it doesn't exist yet
     case ets:info(ws_subscriptions) of
       undefined -> ets:new(ws_subscriptions, [bag, named_table, public]);
@@ -45,6 +45,7 @@ list_subscribers(Channel) ->
   ok.
 
 -spec list_subscribers() -> ok.
+%% warning: could be costly with a large number of subscribers
 list_subscribers() ->
   io:format("~p~n",[ets:match(ws_subscriptions, '$1')]).
 
