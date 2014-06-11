@@ -1,0 +1,5 @@
+*.so
+*.beam
+deps/*/ebin
+apps/*/ebin
+_rel/*
