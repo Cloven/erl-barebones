@@ -1,5 +1,4 @@
-
--module(bare_sup).
+-module(mmo_sup).
 
 -behaviour(supervisor).
 
@@ -9,15 +8,17 @@
 %% Supervisor callbacks
 -export([init/1]).
 
-%% Helper macro for declaring children of supervisor
+%% regular children helper macro
 -define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
+
+%% mmo shard supervisor children helper macro
+-define(SUPERCHILD(I), {I, {mmo_shard_sup, start_link, [I]}, transient, infinity, supervisor, [mmo_shard_sup]}).
 
 %% ===================================================================
 %% API functions
 %% ===================================================================
 
 start_link() ->
-  lager:info("bare supervisor starting children"),
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 %% ===================================================================
@@ -25,5 +26,7 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    BareEngine = ?CHILD(bare_engine, worker),
-    {ok, { {one_for_one, 5, 10}, [ BareEngine ]} }.
+  {ok, Shards} = application:get_env(mmo, shards),
+  lager:info("starting shards: ~p~n", [Shards]),
+  ShardList = [?SUPERCHILD(ShardName) || {ShardName, _Port} <- Shards],
+  {ok, { {one_for_one, 5, 10}, ShardList} }.

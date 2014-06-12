@@ -2,7 +2,9 @@
              [{description,[]},
               {vsn,"1"},
               {registered,[]},
-              {applications,[kernel,stdlib,folsom,eredis,cowboy,lager]},
+              {applications,[kernel,stdlib,folsom,ranch,crypto,cowlib,
+                             syntax_tools,compiler,goldrush,eredis,cowboy,
+                             lager]},
               {mod,{bare_app,[]}},
               {env,[{client_timeout,60000}]},
               {modules,[bare_app,bare_engine,bare_sup,ws_handler]}]}.

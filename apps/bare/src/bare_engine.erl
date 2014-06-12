@@ -26,6 +26,7 @@
 %% ------------------------------------------------------------------
 
 start_link() ->
+    lager:info("bare engine starting"),
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 %% ------------------------------------------------------------------
@@ -35,6 +36,7 @@ start_link() ->
 init(State) ->
   %% eventually change to have dynamic number of redis queue listeners
   spawn_link(fun() -> queue_worker() end),
+  lager:info("bare engine initialized"),
   {ok, State}.
 
 handle_call(_, _From, State) ->

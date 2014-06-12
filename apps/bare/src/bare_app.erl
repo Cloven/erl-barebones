@@ -14,13 +14,22 @@
 -spec start(_, _) -> { ok, pid() }.
 start(_Type, _Args) ->
     %% 'spirals' are meters that operate over the trailing 60 seconds
-    folsom_metrics:new_spiral(fspiral),
-    lager:info("websocket subscription server started"),
+    %%folsom_metrics:new_spiral(fspiral),
+    %%lager:info("websocket subscription server started~n"),
     %% set up the websocket subscription table if it doesn't exist yet
+    lager:info("etsing~n"),
+    Z = ets:info(ws_subscriptions),
+    lager:info("ets value is ~p~n",[Z]),
     case ets:info(ws_subscriptions) of
-      undefined -> ets:new(ws_subscriptions, [bag, named_table, public]);
-      _ -> ok
+      undefined -> 
+        lager:info("undefined ets table, creating~n"),
+        ets:new(ws_subscriptions, [bag, named_table, public]),
+        lager:info("ets table, created~n");
+      _ -> 
+        lager:info("ets table existed~n"),
+        ok
     end,
+    lager:info("ets table created~n"),
     Dispatch = cowboy_router:compile([
             {'_', [
                     {"/", cowboy_static, {priv_file, bare, "index.html"}},
@@ -28,11 +37,13 @@ start(_Type, _Args) ->
                     {"/static/[...]", cowboy_static, {priv_dir, bare, "static"}}
             ]}
     ]),
+    lager:info("routes compiled~n"),
     %% Name, NbAcceptors, TransOpts, ProtoOpts
     cowboy:start_http(my_http_listener, 100,
         [{port, 8080}],
         [{env, [{dispatch, Dispatch}]}]
     ),
+    lager:info("starting bare supervisor~n"),
     bare_sup:start_link().
 
 -spec stop(_S) -> ok.
