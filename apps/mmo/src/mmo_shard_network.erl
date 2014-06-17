@@ -23,7 +23,8 @@
     client_table = <<"mmo client ets table x used before initialization!">>,
     shard_name = <<"uninitialized shard name!">>,
     socket = <<"uninitialized shard socket!">>,
-    socket_clump_size = 10
+    socket_clump_size = 1000,
+    counter = 0
   }).
 
 
@@ -63,12 +64,25 @@ handle_call(_, _From, State) ->
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-handle_info({udp, _MySocket, _TheirIP, _TheirPort, TheirMessage}, State) ->
-  lager:info("udp: ~p received ~p~n",[State#msis.shard_name, TheirMessage]),
+handle_info({udp, _MySocket, TheirIP, TheirPort, TheirMessage}, State) ->
+  Counter = State#msis.counter + 1,
+  case ets:lookup(State#msis.client_table, {TheirIP, TheirPort}) of
+    [] ->
+      lager:info("creating a new client: ~p~n",[{TheirIP, TheirPort}]),
+      NewClient = new_client({TheirIP, TheirPort}, State),
+      mmo_client_fsm:handle_packet(NewClient, {TheirIP, TheirPort}, TheirMessage);
+    [{_Key, PreexistingClient}] ->
+      lager:info("preexisting client: ~p~n",[PreexistingClient]),
+      mmo_client_fsm:handle_packet(PreexistingClient, {TheirIP, TheirPort}, TheirMessage)
+  end,
+  NewState = State#msis{ counter = Counter },
   %%ok = inet:setopts(State#msis.socket,[{active, State#msis.socket_clump_size}]),
+  {noreply, NewState};
+handle_info({udp_passive, Socket}, State) ->
+  ok = inet:setopts(Socket,[{active, State#msis.socket_clump_size}]),
   {noreply, State};
 handle_info(Info, State) ->
-  lager:info("info: ~p received ~p~n",[State#msis.shard_name, Info]),
+  lager:info("misc info: ~p received ~p~n",[State#msis.shard_name, Info]),
   {noreply, State}.
 
 terminate(_Reason, State) ->
@@ -83,3 +97,11 @@ code_change(_OldVsn, State, _Extra) ->
 %% Exported Function Definitions
 %% ------------------------------------------------------------------
 %%
+
+-type ipaddr() :: { pos_integer(), pos_integer(), pos_integer(), pos_integer() }.
+-type ipport() :: pos_integer().
+-spec(new_client({ _I :: ipaddr(), _P :: ipport() }, _State :: any()) -> pid()).
+new_client(AddressTuple, State) ->
+  {ok, Pid} = gen_fsm:start(mmo_client_fsm, AddressTuple, []),
+  ets:insert(State#msis.client_table, {AddressTuple, Pid}),
+  Pid.
